@@ -6,27 +6,51 @@
 #    By: Dugonzal <dugonzal@student.42urduliz.com>  +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/10/07 12:19:03 by Dugonzal          #+#    #+#              #
-#    Updated: 2023/10/07 12:23:02 by Dugonzal         ###   ########.fr        #
+#    Updated: 2023/10/07 13:30:02 by Dugonzal         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 from fastapi import FastAPI, WebSocket
-#from ar_logic import CameraLogic
+from logic.logic import ARGame  # Importa la clase ARGameR
+import logging
 
+from fastapi.responses import StreamingResponse
+import cv2
+import numpy as np
+import io
+import time
+
+
+
+logging.basicConfig(level=logging.DEBUG)
 app = FastAPI()
 
-# Rutas y funciones para la API
-"""
-@app.websocket("/camera")
-async def camera_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    camera = CameraLogic()  # Crea una instancia de la lógica de la cámara desde ar_logic
-    while True:
-        frame = camera.capture_frame()  # Llama a una función en ar_logic para capturar el cuadro
-        await websocket.send_bytes(frame)
 
-# Otras rutas y funciones que puedas necesitar para tu aplicación FastAPI
-"""
+# Función para capturar la cámara en tiempo real
+def capture_camera():
+    cap = cv2.VideoCapture(0)  # Abre la cámara
+    while True:
+        ret, frame = cap.read()  # Lee un fotograma desde la cámara
+        if not ret:
+            break
+        # Convierte el fotograma a bytes
+        _, img_encoded = cv2.imencode(".jpg", frame)
+        # Convierte los bytes a un objeto io.BytesIO
+        img_bytes = io.BytesIO(img_encoded.tobytes())
+
+        # Devuelve el fotograma como una respuesta de transmisión
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + img_bytes.read() + b'\r\n')
+        # Agrega un pequeño retraso para ajustar la velocidad de transmisión
+        time.sleep(0.1)
+
+    cap.release()
+
+@app.get("/cam")
+async def video_feed():
+    return StreamingResponse(capture_camera(), media_type="multipart/x-mixed-replace;boundary=frame")
+
+# Rutas y funciones para la API
 @app.get("/")
 async def read_root():
     return {"message": "Welcome to the AR Game API!"}
