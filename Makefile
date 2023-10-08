@@ -1,5 +1,5 @@
 all:
-	uvicorn app:app --host 0.0.0.0 --port 8010 --reload
+	uvicorn app:app --host 0.0.0.0 --port 3002 --reload
 
 venv:
 	. venv/bin/activate
