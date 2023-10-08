@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mapa Interactivo</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    /* Estilo para el mapa */
+    body, html, #map {
+      height: 100%;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    var zona_coords = [
+    [43.375, -2.979508],  
+      [45.408234, 5.978508],  
+      [40.408234, -2.980508]
+    ];
+
+    function showNotification() {
+      if (!("Notification" in window)) {
+        alert("Este navegador no soporta notificaciones.");
+      } else if (Notification.permission === "granted") {
+        var notification = new Notification("ECLIPSE LOCALIZADO!");
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(function (permission) {
+          if (permission === "granted") {
+            var notification = new Notification("ECLIPSE LOCALIZADO!");
+          }
+        });
+      }
+    }
+
+    function initMap() {
+      var map = L.map('map').setView([41.944544, -2.314262], 8);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+
+      var polygon = L.polygon(zona_coords, { color: 'blue', fillOpacity: 0.3 }).addTo(map);
+      polygon.bindPopup("Zona señalada");
+
+      navigator.geolocation.getCurrentPosition(function(position) {
+        var lat = position.coords.latitude;
+        var lon = position.coords.longitude;
+
+        var isInside = isPointInsidePolygon([lat, lon], zona_coords);
+
+        if (isInside) {
+          showNotification();
+        }
+
+        var marker = L.marker([lat, lon]).addTo(map);
+        marker.setIcon(L.icon({
+          iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet.awesome-markers/2.0.2/img/marker-icon-2x.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [0, -22]
+        }));
+        marker.bindPopup("Tu ubicación").openPopup();
+      }, function(error) {
+        alert("Error al obtener la ubicación: " + error.message);
+      });
+    }
+
+    function isPointInsidePolygon(point, vs) {
+      var x = point[0], y = point[1];
+      var inside = false;
+
+      for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+        var xi = vs[i][0], yi = vs[i][1];
+        var xj = vs[j][0], yj = vs[j][1];
+
+        var intersect = ((yi > y) !== (yj > y)) && (x < ((xj - xi) * (y - yi)) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+
+      return inside;
+    }
+
+    initMap();
+  </script>
+</body>
+</html>
